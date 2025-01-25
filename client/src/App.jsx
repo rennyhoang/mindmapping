@@ -3,23 +3,32 @@ import RecordRTC from "recordrtc";
 
 const App = () => {
   const [transcript, setTranscript] = useState("");
+  const [sessionId, setSessionId] = useState(null);
   const wsRef = useRef(null);
   const recorderRef = useRef(null);
 
+  const getGraph = async () => {
+    if (!sessionId) return;
+    window.open(`http://localhost:8000/graph/${sessionId}`);
+  };
+
   const startRecording = async () => {
     try {
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Establish WebSocket connection
-      wsRef.current = new WebSocket("wss://127.0.0.1:8000/transcribe");
+      wsRef.current = new WebSocket("ws://localhost:8000/transcribe");
 
       wsRef.current.onopen = () => {
         console.log("WebSocket connection established");
       };
 
       wsRef.current.onmessage = (event) => {
-        setTranscript((prev) => prev + " " + event.data);
+        if (event.data.startsWith("Session ID")) {
+          setSessionId(event.data.split(": ")[1]);
+          wsRef.current.close();
+        } else {
+          setTranscript((prev) => prev + " " + event.data);
+        }
       };
 
       wsRef.current.onerror = (error) => {
@@ -31,7 +40,7 @@ const App = () => {
         type: "audio",
         mimeType: "audio/wav", // Send uncompressed audio
         recorderType: RecordRTC.StereoAudioRecorder,
-        timeSlice: 1000, // Send chunks every second
+        timeSlice: 5000, // Send chunks every second
         desiredSampRate: 16000, // Recommended for speech recognition
         numberOfAudioChannels: 1, // Mono channel for better compatibility
         ondataavailable: (blob) => {
@@ -42,7 +51,6 @@ const App = () => {
       });
 
       recorderRef.current.startRecording();
-      console.log("Recording started...");
     } catch (err) {
       console.error("Error accessing microphone:", err);
     }
@@ -50,13 +58,10 @@ const App = () => {
 
   const stopRecording = () => {
     if (recorderRef.current) {
-      recorderRef.current.stopRecording(() => {
-        console.log("Recording stopped");
-      });
+      recorderRef.current.stopRecording();
     }
     if (wsRef.current) {
-      wsRef.current.close();
-      console.log("WebSocket connection closed");
+      wsRef.current.send("STOP");
     }
   };
 
@@ -65,6 +70,9 @@ const App = () => {
       <h1>Real-Time Audio Transcription</h1>
       <button onClick={startRecording}>Start Recording</button>
       <button onClick={stopRecording}>Stop Recording</button>
+      <button onClick={getGraph} disabled={!sessionId}>
+        Generate Graph
+      </button>
       <p>
         <strong>Transcript:</strong> {transcript}
       </p>
