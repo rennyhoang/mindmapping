@@ -1,82 +1,47 @@
-import { useState, useRef } from "react";
-import RecordRTC from "recordrtc";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { ReactFlow } from "@xyflow/react";
+import SignUp from "./components/SignUp";
+import Login from "./components/Login";
+import Transcription from "./components/Transcription";
+
+import "@xyflow/react/dist/style.css";
+
+const initialNodes = [
+  { id: "1", position: { x: 0, y: 0 }, data: { label: "1" } },
+  { id: "2", position: { x: 0, y: 100 }, data: { label: "2" } },
+];
+const initialEdges = [{ id: "e1-2", source: "1", target: "2" }];
 
 const App = () => {
-  const [transcript, setTranscript] = useState("");
-  const [sessionId, setSessionId] = useState(null);
-  const wsRef = useRef(null);
-  const recorderRef = useRef(null);
-
-  const getGraph = async () => {
-    if (!sessionId) return;
-    window.open(`http://localhost:8000/graph/${sessionId}`);
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      wsRef.current = new WebSocket("ws://localhost:8000/transcribe");
-
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connection established");
-      };
-
-      wsRef.current.onmessage = (event) => {
-        if (event.data.startsWith("Session ID")) {
-          setSessionId(event.data.split(": ")[1]);
-          wsRef.current.close();
-        } else {
-          setTranscript((prev) => prev + " " + event.data);
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      // Use RecordRTC for capturing audio in real time
-      recorderRef.current = new RecordRTC(stream, {
-        type: "audio",
-        mimeType: "audio/wav", // Send uncompressed audio
-        recorderType: RecordRTC.StereoAudioRecorder,
-        timeSlice: 5000, // Send chunks every second
-        desiredSampRate: 16000, // Recommended for speech recognition
-        numberOfAudioChannels: 1, // Mono channel for better compatibility
-        ondataavailable: (blob) => {
-          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(blob);
-          }
-        },
-      });
-
-      recorderRef.current.startRecording();
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-    }
-  };
-
-  const stopRecording = () => {
-    if (recorderRef.current) {
-      recorderRef.current.stopRecording();
-    }
-    if (wsRef.current) {
-      wsRef.current.send("STOP");
-    }
-  };
-
   return (
-    <div>
-      <h1>Real-Time Audio Transcription</h1>
-      <button onClick={startRecording}>Start Recording</button>
-      <button onClick={stopRecording}>Stop Recording</button>
-      <button onClick={getGraph} disabled={!sessionId}>
-        Generate Graph
-      </button>
-      <p>
-        <strong>Transcript:</strong> {transcript}
-      </p>
-    </div>
+    <Router>
+      <div
+        style={{
+          width: "500px",
+          height: "500px",
+          textAlign: "center",
+          marginTop: "50px",
+        }}
+      >
+        <h1>Real-Time Mindmapping</h1>
+        <nav style={{ marginBottom: "20px" }}>
+          <Link to="/" style={{ marginRight: "15px" }}>
+            Home
+          </Link>
+          <Link to="/signup" style={{ marginRight: "15px" }}>
+            Sign Up
+          </Link>
+          <Link to="/login">Login</Link>
+        </nav>
+
+        <Routes>
+          <Route path="/" element={<Transcription />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<Login />} />
+        </Routes>
+        <ReactFlow nodes={initialNodes} edges={initialEdges} />
+      </div>
+    </Router>
   );
 };
 
