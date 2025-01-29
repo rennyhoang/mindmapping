@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import RecordRTC from "recordrtc";
 
-const Transcription = () => {
+const Transcription = ({ setSessionId }) => {
   const [transcript, setTranscript] = useState("");
   const wsRef = useRef(null);
   const recorderRef = useRef(null);
@@ -19,6 +19,7 @@ const Transcription = () => {
       wsRef.current.onmessage = (event) => {
         if (event.data.startsWith("Session ID")) {
           wsRef.current.close();
+          setSessionId(event.data.split(": ")[1]);
         } else {
           setTranscript((prev) => prev + " " + event.data);
         }

@@ -1,12 +1,11 @@
 import uuid
 
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import spacy
 import whisper
 from fastapi import FastAPI, HTTPException, WebSocket
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 model = whisper.load_model("small.en")
@@ -46,39 +45,41 @@ async def generate_graph(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
 
     transcript = transcript_store[session_id]
-
-    # Process the transcript using spaCy
     doc = nlp(transcript)
-
-    # Create a graph representation
     G = nx.Graph()
 
-    # Add named entities as nodes
-    for ent in doc.ents:
-        G.add_node(ent.text, label=ent.label_)
+    for entity in doc.ents:
+        print(entity.text)
+        G.add_node(entity.text, label=entity.label_)
 
+    # TODO: Actually define mindmap relationships
     for sent in doc.sents:
         entities_in_sent = [ent.text for ent in sent.ents]
         for i in range(len(entities_in_sent)):
             for j in range(i + 1, len(entities_in_sent)):
                 G.add_edge(entities_in_sent[i], entities_in_sent[j])
 
-    # Save the graph visualization to a file
-    plt.figure(figsize=(8, 6))
-    pos = nx.spring_layout(G, k=1)
-    nx.draw(
-        G,
-        pos,
-        with_labels=True,
-        node_color="lightblue",
-        edge_color="black",
-        width=2,
-        node_size=3000,
-        font_size=10,
-    )
-    plt.title("Named Entity Relationship Graph")
-    plt.savefig("graph.png")
-    plt.close()
+    pos = nx.spring_layout(G, k=20)
 
-    # Return the graph image
-    return FileResponse("graph.png")
+    for node, (x, y) in pos.items():
+        print((x, y))
+
+    nodes = [
+        {
+            "id": node,
+            "position": {"x": float(x) * 100, "y": float(y) * 100},
+            "data": {"label": node},
+        }
+        for node, (x, y) in pos.items()
+    ]
+
+    edges = [
+        {
+            "id": f"e-{source}-{target}",
+            "source": str(source),
+            "target": str(target),
+        }
+        for source, target in G.edges()
+    ]
+
+    return JSONResponse(content={"nodes": nodes, "edges": edges})
