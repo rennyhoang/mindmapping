@@ -36,7 +36,6 @@ const App = () => {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
         </Routes>
-        <button disabled={!sessionId}>Generate Graph</button>
         <MindMap sessionId={sessionId} />
       </div>
     </Router>

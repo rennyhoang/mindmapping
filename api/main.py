@@ -27,7 +27,7 @@ async def websocket_endpoint(websocket: WebSocket):
             audio_np = np.frombuffer(audio_chunk, dtype=np.int16)
             audio_np = audio_np.astype(np.float32) / np.iinfo(np.int16).max
             result = model.transcribe(audio_np, fp16=False)
-            text = result["text"]
+            text = str(result["text"])
             transcript_store[session_id] += text + " "
             await websocket.send_text(text)
 
@@ -49,7 +49,6 @@ async def generate_graph(session_id: str):
     G = nx.Graph()
 
     for entity in doc.ents:
-        print(entity.text)
         G.add_node(entity.text, label=entity.label_)
 
     # TODO: Actually define mindmap relationships
@@ -59,15 +58,12 @@ async def generate_graph(session_id: str):
             for j in range(i + 1, len(entities_in_sent)):
                 G.add_edge(entities_in_sent[i], entities_in_sent[j])
 
-    pos = nx.spring_layout(G, k=20)
-
-    for node, (x, y) in pos.items():
-        print((x, y))
+    pos = nx.spring_layout(G, k=200)
 
     nodes = [
         {
             "id": node,
-            "position": {"x": float(x) * 100, "y": float(y) * 100},
+            "position": {"x": float(x) * 200, "y": float(y) * 200},
             "data": {"label": node},
         }
         for node, (x, y) in pos.items()

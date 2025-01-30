@@ -21,7 +21,9 @@ const Transcription = ({ setSessionId }) => {
           wsRef.current.close();
           setSessionId(event.data.split(": ")[1]);
         } else {
-          setTranscript((prev) => prev + " " + event.data);
+          if (!event.data.startsWith("Error: 'bytes'")) {
+            setTranscript((prev) => prev + " " + event.data);
+          }
         }
       };
 

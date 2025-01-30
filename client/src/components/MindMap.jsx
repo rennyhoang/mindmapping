@@ -25,8 +25,8 @@ const GraphVisualization = ({ sessionId }) => {
   }, [sessionId]);
 
   return (
-    <div style={{ height: "500px", width: "100%" }}>
-      <ReactFlow nodes={nodes} edges={edges} fitView />
+    <div style={{ height: "500px", width: "100%", marginTop: "50px" }}>
+      <ReactFlow nodes={nodes} edges={edges} colorMode="dark" />
     </div>
   );
 };
